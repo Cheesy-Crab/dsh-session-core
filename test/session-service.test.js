@@ -26,5 +26,8 @@ test('session core is a loadable service plugin', () => {
     log: () => {},
   })
   assert.ok(manager instanceof ChatAgentManager)
+  const access = services.get('accessService')
+  assert.ok(access)
+  assert.equal(typeof access.createStore, 'function')
   for (const cleanup of cleanups) cleanup()
 })

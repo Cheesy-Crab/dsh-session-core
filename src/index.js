@@ -1,6 +1,8 @@
 import { SessionService } from './service.js'
+import { AccessService } from './access/service.js'
 
 export { SessionService } from './service.js'
+export { AccessService } from './access/service.js'
 export { ChatAgentManager } from './manager.js'
 export * from './paths.js'
 export * from './reply.js'
@@ -29,6 +31,12 @@ export function apply(ctx, rawConfig = {}) {
     ctx.provide('sessionService', service)
   } catch (error) {
     log('warn', `could not provide sessionService: ${error?.message ?? error}`)
+  }
+  const access = new AccessService({ log })
+  try {
+    ctx.provide('accessService', access)
+  } catch (error) {
+    log('warn', `could not provide accessService: ${error?.message ?? error}`)
   }
   ctx.effect?.(() => () => service.dispose())
 }
