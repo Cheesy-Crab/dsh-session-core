@@ -132,6 +132,14 @@ export class ChatAgentManager {
     return state
   }
 
+  status() {
+    let sessions = 0
+    for (const state of this.chats.values()) {
+      if (state.sessionId) sessions += 1
+    }
+    return { chats: this.chats.size, sessions }
+  }
+
   async profileFor(state) {
     if (state.profileOverride) return state.profileOverride
     if (typeof this.resolveProfile !== 'function') return {}
