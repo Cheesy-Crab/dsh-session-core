@@ -82,7 +82,7 @@ node --test --test-force-exit
 
 ## Status
 
-`0.46.0` — extracted from `dsh-qq-bridge` as a required core service plugin; owns session, workspace and access primitives.
+`0.48.0` — extracted from `dsh-qq-bridge` as a required core service plugin; owns session, workspace and access primitives.
 
 ## License
 

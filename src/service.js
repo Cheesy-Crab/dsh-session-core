@@ -1,4 +1,5 @@
 import { ChatAgentManager } from './manager.js'
+import { resolveWorkspacesRoot } from './paths.js'
 
 /**
  * Core-owned session service. Communication adapters ask this service to create
@@ -18,6 +19,10 @@ export class SessionService {
     })
     this.managers.push(manager)
     return manager
+  }
+
+  resolveWorkspacesRoot(raw) {
+    return resolveWorkspacesRoot(raw)
   }
 
   dispose() {
