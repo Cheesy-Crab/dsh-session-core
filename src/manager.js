@@ -143,10 +143,21 @@ export class ChatAgentManager {
     }
   }
 
+  /**
+   * Switch the conversation to a profile. The preset is fixed when a session
+   * is created, so the next turn must open a new session: keeping the old
+   * session id/handle would keep the old agent. The old session is only
+   * detached, never cancelled here; this method runs between turns.
+   * @param {{ type: string, id: string }} chat
+   * @param {any} profile
+   */
   setProfile(chat, profile) {
     const state = this.stateFor(chat)
     state.profileOverride = profile
     state.profileId = profile?.id
+    state.sessionId = undefined
+    state.handle = undefined
+    if (state.workspaceId && state.sessions) delete state.sessions[state.workspaceId]
     this.persist(state)
     return state
   }
@@ -174,6 +185,7 @@ export class ChatAgentManager {
    * Without this, models often write a file path in prose and believe it was sent.
    */
   applySessionExtensions(handle, state, profile = {}) {
+    if (profile?.id && handle?.agent) handle.agent.__platformProfile = profile
     return this.behavior.sessionReady?.({
       agent: handle.agent,
       session: handle.agent.session,
