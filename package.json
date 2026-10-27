@@ -56,7 +56,8 @@
     }
   },
   "scripts": {
-    "test": "node --test --test-force-exit"
+    "test": "node --test --test-force-exit",
+    "check": "node scripts/check-manifests.mjs"
   },
   "engines": {
     "node": ">=22",
