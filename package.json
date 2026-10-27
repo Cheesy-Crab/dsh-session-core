@@ -1,6 +1,6 @@
 {
   "name": "@dsh/session-core",
-  "version": "0.43.0",
+  "version": "0.45.0",
   "description": "Surface-neutral DSH session service: workspace, session lifecycle, queue and reply handling.",
   "type": "module",
   "main": "./src/index.js",
@@ -10,12 +10,17 @@
     "./manager": "./src/manager.js",
     "./paths": "./src/paths.js",
     "./reply": "./src/reply.js",
-    "./titles": "./src/titles.js"
+    "./titles": "./src/titles.js",
+    "./access": "./src/access/index.js",
+    "./access/users": "./src/access/users.js",
+    "./access/capabilities": "./src/access/capabilities.js",
+    "./access/levels": "./src/access/levels.js"
   },
   "files": [
     "src",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "repository": {
     "type": "git",
@@ -51,5 +56,6 @@
   },
   "engines": {
     "node": ">=22"
-  }
+  },
+  "license": "MIT"
 }

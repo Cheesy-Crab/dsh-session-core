@@ -5,6 +5,7 @@ export { ChatAgentManager } from './manager.js'
 export * from './paths.js'
 export * from './reply.js'
 export * from './titles.js'
+export * from './access/index.js'
 
 export const name = 'dsh-session-core'
 
