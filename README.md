@@ -1,4 +1,4 @@
-# dsh-session-core
+﻿# dsh-session-core
 
 Core-owned session service for DSH. It manages workspaces, session lifecycle, turn queues, reply splitting and titles for every communication surface.
 
@@ -86,4 +86,5 @@ node --test --test-force-exit
 
 ## License
 
-License not declared yet.
+MIT License.
+
