@@ -1,0 +1,55 @@
+{
+  "name": "@dsh/session-core",
+  "version": "0.43.0",
+  "description": "Surface-neutral DSH session service: workspace, session lifecycle, queue and reply handling.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./manager": "./src/manager.js",
+    "./paths": "./src/paths.js",
+    "./reply": "./src/reply.js",
+    "./titles": "./src/titles.js"
+  },
+  "files": [
+    "src",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Cheesy-Crab/dsh-session-core.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Cheesy-Crab/dsh-session-core/issues"
+  },
+  "homepage": "https://github.com/Cheesy-Crab/dsh-session-core#readme",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "session",
+    "workspace",
+    "platform"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "pluginApi": "1.1",
+    "capabilities": [
+      {
+        "id": "session.core",
+        "kind": "memory",
+        "title": "Session Core",
+        "description": "Core-owned session and workspace lifecycle for all communication surfaces."
+      }
+    ]
+  },
+  "scripts": {
+    "test": "node --test --test-force-exit"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
