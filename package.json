@@ -1,6 +1,6 @@
 {
   "name": "@dsh/session-core",
-  "version": "0.48.0",
+  "version": "0.49.0",
   "description": "Surface-neutral DSH session service: workspace, session lifecycle, queue and reply handling.",
   "type": "module",
   "main": "./src/index.js",
@@ -42,21 +42,25 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
-    "pluginApi": "1.1",
-    "capabilities": [
-      {
-        "id": "session.core",
-        "kind": "memory",
-        "title": "Session Core",
-        "description": "Core-owned session and workspace lifecycle for all communication surfaces."
-      }
-    ]
+    "platform": {
+      "contract": "1.2",
+      "capabilities": [
+        {
+          "id": "session.core",
+          "kind": "memory",
+          "title": "Session Core",
+          "description": "Core-owned session and workspace lifecycle for all communication surfaces."
+        }
+      ],
+      "profiles": []
+    }
   },
   "scripts": {
     "test": "node --test --test-force-exit"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22",
+    "dsh": ">=0.2.1-rc.2"
   },
   "license": "MIT"
 }

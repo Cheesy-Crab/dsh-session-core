@@ -54,7 +54,7 @@ export class ChatAgentManager {
    *           send: (chat: { type: string, id: string }, text: string) => Promise<unknown>,
    *           store: import('../store.js').JsonStore }} options
    */
-  constructor({ ctx, config, root, log, send, sendImage, store, approval, bindSession, resolveChat, behavior }) {
+  constructor({ ctx, config, root, log, send, sendImage, store, approval, bindSession, resolveChat, behavior, resolveProfile }) {
     this.ctx = ctx
     this.config = config
     this.root = root
@@ -66,6 +66,7 @@ export class ChatAgentManager {
     this.bindSession = bindSession
     this.resolveChat = resolveChat
     this.behavior = behavior ?? {}
+    this.resolveProfile = resolveProfile
     this.chats = new Map()
     /** Last sequence delivered to QQ, per session. */
     this.delivered = new WeakMap()
@@ -94,6 +95,8 @@ export class ChatAgentManager {
         labels: saved?.labels ?? {},
         titles: saved?.titles ?? {},
         archived: saved?.archived ?? [],
+        profileId: saved?.profileId,
+        profileOverride: saved?.profile,
         guest: false,
         level: 'L1',
         capabilities: [],
@@ -115,6 +118,8 @@ export class ChatAgentManager {
       labels: state.labels,
       titles: state.titles ?? {},
       archived: state.archived,
+      profileId: state.profileId,
+      profile: state.profileOverride,
       updatedAt: Date.now(),
     })
   }
@@ -124,6 +129,25 @@ export class ChatAgentManager {
     state.level = level
     state.capabilities = capabilities
     if (imageQuota !== undefined) state.imageQuota = imageQuota
+    return state
+  }
+
+  async profileFor(state) {
+    if (state.profileOverride) return state.profileOverride
+    if (typeof this.resolveProfile !== 'function') return {}
+    try {
+      return (await this.resolveProfile({ chat: state.chat, state })) ?? {}
+    } catch (error) {
+      this.log('warn', `profile resolution failed: ${error?.message ?? error}`)
+      return {}
+    }
+  }
+
+  setProfile(chat, profile) {
+    const state = this.stateFor(chat)
+    state.profileOverride = profile
+    state.profileId = profile?.id
+    this.persist(state)
     return state
   }
 
@@ -149,12 +173,13 @@ export class ChatAgentManager {
    * Tell the agent that images only reach QQ when they go through `present`.
    * Without this, models often write a file path in prose and believe it was sent.
    */
-  applySessionExtensions(handle, state) {
+  applySessionExtensions(handle, state, profile = {}) {
     return this.behavior.sessionReady?.({
       agent: handle.agent,
       session: handle.agent.session,
       chat: state.chat,
       state,
+      profile,
       level: state.level ?? 'L1',
       sendText: this.send,
       sendImage: this.sendImage,
@@ -162,8 +187,7 @@ export class ChatAgentManager {
     })
   }
 
-  async ensurePreset(agent) {
-    const preset = this.config.agent.preset
+  async ensurePreset(agent, preset = this.config.agent.preset) {
     const presets = this.ctx.get('agentPresets')
     if (!preset || !presets) return
     try {
@@ -317,6 +341,9 @@ export class ChatAgentManager {
   async openSession(state) {
     const workspace = await this.ensureWorkspace(state)
     const { agents, approval } = this.services()
+    const profile = await this.profileFor(state)
+    const preset = profile.agentPreset ?? this.config.agent.preset
+    if (profile.id) state.profileId = profile.id
 
     if (state.sessionId) {
       const live = agents.get(state.sessionId)
@@ -328,8 +355,8 @@ export class ChatAgentManager {
       try {
         const handle = await agents.resume({ resumeSessionId: state.sessionId, agentOptions: this.agentOptions() })
         await this.attach(workspace, state.sessionId)
-        await this.ensurePreset(handle.agent)
-        await this.applySessionExtensions(handle, state)
+        await this.ensurePreset(handle.agent, preset)
+        await this.applySessionExtensions(handle, state, profile)
         this.track(state, state.sessionId)
         this.applySandboxMode(handle.agent.session, state.level ?? 'L1', state.capabilities ?? [], state)
         state.handle = handle
@@ -345,18 +372,21 @@ export class ChatAgentManager {
 
   async createSession(state, workspace) {
     const { agents, approval } = this.services()
+    const profile = await this.profileFor(state)
+    const preset = profile.agentPreset ?? this.config.agent.preset
+    if (profile.id) state.profileId = profile.id
     const sessionId = `sess-qq-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
     const handle = await agents.create({
       sessionId,
       meta: {
         cwd: workspace.path,
-        ...(this.config.agent.preset ? { agentPreset: this.config.agent.preset } : {}),
+        ...(preset ? { agentPreset: preset } : {}),
       },
       agentOptions: this.agentOptions(),
     })
     await this.attach(workspace, sessionId)
-    await this.ensurePreset(handle.agent)
-    await this.applySessionExtensions(handle, state)
+    await this.ensurePreset(handle.agent, preset)
+    await this.applySessionExtensions(handle, state, profile)
     this.track(state, sessionId)
     this.applySandboxMode(handle.agent.session, state.level ?? 'L1', state.capabilities ?? [], state)
 
