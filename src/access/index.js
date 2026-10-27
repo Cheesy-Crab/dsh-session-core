@@ -1,4 +1,5 @@
 export { UserStore } from './users.js'
 export { AccessService } from './service.js'
+export * from './identity.js'
 export * from './capabilities.js'
 export * from './levels.js'

@@ -4,6 +4,7 @@ import path from 'node:path'
 
 import { normalizeCapabilities } from './capabilities.js'
 import { normalizeLevel } from './levels.js'
+import { normalizePrincipal } from './identity.js'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -18,7 +19,7 @@ export class UserStore {
    */
   constructor({ file, admins = [], log, now = Date.now }) {
     this.file = file
-    this.admins = admins
+    this.admins = admins.map(normalizePrincipal)
     this.log = log
     this.now = now
     this.state = { version: 1, users: {}, codes: {} }
@@ -30,7 +31,15 @@ export class UserStore {
       if (parsed?.version !== 1 || typeof parsed.users !== 'object' || parsed.users === null) {
         throw new Error('unexpected user store shape')
       }
-      this.state = { version: 1, users: parsed.users, codes: parsed.codes ?? {} }
+      const users = {}
+      let migrated = false
+      for (const [key, user] of Object.entries(parsed.users)) {
+        const normalized = normalizePrincipal(key)
+        if (normalized !== key) migrated = true
+        if (!users[normalized]) users[normalized] = user
+      }
+      this.state = { version: 1, users, codes: parsed.codes ?? {} }
+      if (migrated) this.save()
     } catch (error) {
       if (error?.code !== 'ENOENT') this.log?.('warn', `user store ignored (${error?.message ?? error}): ${this.file}`)
     }
@@ -64,10 +73,11 @@ export class UserStore {
   }
 
   ensure(openid) {
-    let user = this.state.users[openid]
+    const key = normalizePrincipal(openid)
+    let user = this.state.users[key]
     if (!user) {
       user = { level: 'L0', status: 'active', capabilities: [], createdAt: this.now(), daily: { date: today(), turns: 0 } }
-      this.state.users[openid] = user
+      this.state.users[key] = user
     }
     user.capabilities ??= []
     user.denied = normalizeCapabilities(user.denied ?? [])
@@ -80,7 +90,7 @@ export class UserStore {
    * @returns {{ level: string, status: string, capabilities: string[], denied: string[], daily: { date: string, turns: number } }}
    */
   user(openid) {
-    return this.state.users[openid] ?? {
+    return this.state.users[normalizePrincipal(openid)] ?? {
       level: 'L0',
       status: 'active',
       capabilities: [],
@@ -156,7 +166,7 @@ export class UserStore {
   }
 
   levelOf(openid) {
-    const user = this.state.users[openid]
+    const user = this.state.users[normalizePrincipal(openid)]
     if (!user || user.status === 'frozen') return 'L0'
     return normalizeLevel(user.level)
   }

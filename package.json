@@ -1,6 +1,6 @@
 {
   "name": "@dsh/session-core",
-  "version": "0.46.0",
+  "version": "0.47.0",
   "description": "Surface-neutral DSH session service: workspace, session lifecycle, queue and reply handling.",
   "type": "module",
   "main": "./src/index.js",
@@ -13,6 +13,7 @@
     "./titles": "./src/titles.js",
     "./access": "./src/access/index.js",
     "./access/users": "./src/access/users.js",
+    "./access/identity": "./src/access/identity.js",
     "./access/capabilities": "./src/access/capabilities.js",
     "./access/levels": "./src/access/levels.js"
   },
