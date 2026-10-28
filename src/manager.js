@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs'
+import fs from 'node:fs'
 import path from 'node:path'
 
 import { groupDir, ownsDir, uniquenessKey, userDir, validateName, workspacePath } from './paths.js'
@@ -19,7 +19,6 @@ const normalizeLabel = (label) => String(label ?? '').replace(/[\r\n\t]+/g, ' ')
 export function applyTurnContext(state, {
   level = 'L1',
   accessGrants = [],
-  imageQuota,
   requester,
   principal,
 } = {}) {
@@ -27,7 +26,6 @@ export function applyTurnContext(state, {
   state.accessGrants = accessGrants
   if (requester !== undefined) state.requester = String(requester)
   if (principal !== undefined) state.principal = String(principal)
-  if (imageQuota !== undefined) state.imageQuota = imageQuota
   return state
 }
 
@@ -144,9 +142,9 @@ export class ChatAgentManager {
     })
   }
 
-  setContext(chat, { level = 'L1', accessGrants = [], imageQuota } = {}) {
+  setContext(chat, { level = 'L1', accessGrants = [] } = {}) {
     const state = this.stateFor(chat)
-    applyTurnContext(state, { level, accessGrants, imageQuota })
+    applyTurnContext(state, { level, accessGrants })
     return state
   }
 
@@ -838,14 +836,13 @@ export class ChatAgentManager {
    * - `level` is the access tier (L0-L3), not a profile.
    * - `accessGrants` are access grants (`image`, `read`, `write`, ...), not
    *   profile capabilities (`image.generate`).
-   * - `requester` is the sender; `principal` owns quota and group permissions.
-   * - `imageQuota` is a billing snapshot, not a tool grant.
+   * - `requester` is the sender; `principal` owns group permissions.
    *
    * Profile selection happens later, during session creation, and is never
    * chosen by the bridge.
    *
    * @param {{ chat: any, userId?: string, id: string, text: string }} message
-   * @param {{ level?: string, accessGrants?: string[], imageQuota?: number,
+   * @param {{ level?: string, accessGrants?: string[],
    *           requester?: string, principal?: string }} [context]
    */
   async handle(message, context = {}) {

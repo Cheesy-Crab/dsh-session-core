@@ -8,13 +8,11 @@ test('bridge context keeps access grants separate from profile capabilities', ()
   applyTurnContext(state, {
     level: 'L2',
     accessGrants: ['image', 'read'],
-    imageQuota: 42,
     requester: 'qq:710711549',
     principal: 'private:710711549',
   })
   assert.equal(state.level, 'L2')
   assert.deepEqual(state.accessGrants, ['image', 'read'])
-  assert.equal(state.imageQuota, 42)
   assert.equal(state.requester, 'qq:710711549')
   assert.equal(state.principal, 'private:710711549')
   assert.equal(state.profileId, undefined)
