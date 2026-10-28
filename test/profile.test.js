@@ -17,6 +17,7 @@ test('conversation profile overrides the global preset', async () => {
     log: () => {},
     send: async () => {},
     sendImage: async () => {},
+    resolveProfile: ({ state }) => ({ id: state.profileId, agentPreset: 'tavern' }),
     store,
   })
   const chat = { type: 'group', id: '42' }

@@ -114,7 +114,6 @@ export class ChatAgentManager {
         titles: saved?.titles ?? {},
         archived: saved?.archived ?? [],
         profileId: saved?.profileId,
-        profileOverride: saved?.profile,
         guest: false,
         level: 'L1',
         accessGrants: [],
@@ -137,7 +136,6 @@ export class ChatAgentManager {
       titles: state.titles ?? {},
       archived: state.archived,
       profileId: state.profileId,
-      profile: state.profileOverride,
       updatedAt: Date.now(),
     })
   }
@@ -157,12 +155,12 @@ export class ChatAgentManager {
   }
 
   async profileFor(state) {
-    if (state.profileOverride) return state.profileOverride
+    if (!state.profileId) return {}
     if (typeof this.resolveProfile !== 'function') return {}
     try {
       return (await this.resolveProfile({ chat: state.chat, state })) ?? {}
     } catch (error) {
-      this.log('warn', `profile resolution failed: ${error?.message ?? error}`)
+      this.log('warn', `profile resolution failed for ${state.profileId}: ${error?.message ?? error}`)
       return {}
     }
   }
@@ -177,8 +175,11 @@ export class ChatAgentManager {
    */
   setProfile(chat, profile) {
     const state = this.stateFor(chat)
-    state.profileOverride = profile
-    state.profileId = profile?.id
+    const profileId = typeof profile === 'string' ? profile : profile?.id
+    if (profile !== undefined && (typeof profileId !== 'string' || profileId.length === 0)) {
+      throw new Error('profile id is required')
+    }
+    state.profileId = profileId
     state.sessionId = undefined
     state.handle = undefined
     if (state.workspaceId && state.sessions) delete state.sessions[state.workspaceId]
@@ -378,7 +379,6 @@ export class ChatAgentManager {
     const { agents, approval } = this.services()
     const profile = await this.profileFor(state)
     const preset = profile.agentPreset ?? this.config.agent.preset
-    if (profile.id) state.profileId = profile.id
 
     if (state.sessionId) {
       const live = agents.get(state.sessionId)
@@ -409,7 +409,6 @@ export class ChatAgentManager {
     const { agents, approval } = this.services()
     const profile = await this.profileFor(state)
     const preset = profile.agentPreset ?? this.config.agent.preset
-    if (profile.id) state.profileId = profile.id
     const sessionId = `sess-qq-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
     const handle = await agents.create({
       sessionId,

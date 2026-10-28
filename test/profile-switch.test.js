@@ -88,6 +88,10 @@ function harness() {
     log: () => {},
     send: async () => {},
     sendImage: async () => {},
+    resolveProfile: ({ state }) => ({
+      id: state.profileId,
+      agentPreset: state.profileId === 'alpha' ? 'preset-alpha' : 'preset-beta',
+    }),
     store,
   })
 
@@ -122,7 +126,7 @@ test('profile switch starts a new session with the new preset and keeps the work
   assert.equal(state.workspacePath, workspacePath)
   assert.equal(state.workspaceName, workspaceName)
 
-  // Override resolution and persistence still work as before.
+  // Only the selected id is persisted; the descriptor is re-resolved later.
   assert.deepEqual(await h.manager.profileFor(state), { id: 'beta', agentPreset: 'preset-beta' })
   assert.equal(state.profileId, 'beta')
   const persisted = h.writes.at(-1).value
@@ -130,7 +134,7 @@ test('profile switch starts a new session with the new preset and keeps the work
   assert.equal(persisted.workspaceId, workspaceId)
   assert.equal(persisted.workspacePath, workspacePath)
   assert.equal(persisted.profileId, 'beta')
-  assert.equal(persisted.profile.id, 'beta')
+  assert.equal(persisted.profile, undefined)
 
   const secondHandle = await h.manager.openSession(state)
 
