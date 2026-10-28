@@ -419,6 +419,9 @@ export class ChatAgentManager {
         cwd: workspace.path,
         ...(preset ? { agentPreset: preset } : {}),
         ...(profile.id ? { profileId: profile.id } : {}),
+        ...(state.requester ? { requester: state.requester } : {}),
+        ...(state.principal ? { principal: state.principal } : {}),
+        ...(state.key ? { chatKey: state.key } : {}),
       },
       agentOptions: this.agentOptions(),
     })
