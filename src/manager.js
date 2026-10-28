@@ -209,7 +209,6 @@ export class ChatAgentManager {
    * Without this, models often write a file path in prose and believe it was sent.
    */
   applySessionExtensions(handle, state, profile = {}) {
-    if (profile?.id && handle?.agent) handle.agent.__platformProfile = profile
     return this.behavior.sessionReady?.({
       agent: handle.agent,
       session: handle.agent.session,
@@ -417,6 +416,7 @@ export class ChatAgentManager {
       meta: {
         cwd: workspace.path,
         ...(preset ? { agentPreset: preset } : {}),
+        ...(profile.id ? { profileId: profile.id } : {}),
       },
       agentOptions: this.agentOptions(),
     })
@@ -877,7 +877,6 @@ export class ChatAgentManager {
     })
     const handle = await this.ensureSession(state)
     const session = handle.agent.session
-    await this.applySessionExtensions(handle, state)
     this.track(state, session?.header?.id, message.userId)
     this.applySandboxMode(session, state.level ?? 'L1', state.accessGrants ?? [], state)
     await this.flushFollowUps(state, session)
@@ -1062,5 +1061,6 @@ function resolveByIndexOrName(workspaces, token) {
   return workspaces.find((workspace) => workspace.title === token)
     ?? workspaces.find((workspace) => workspace.id.startsWith(String(token)))
 }
+
 
 
