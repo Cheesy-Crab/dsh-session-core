@@ -24,3 +24,9 @@ test('bridge context refresh keeps previous principal when omitted', () => {
   assert.equal(state.principal, 'group:1')
   assert.equal(state.requester, 'qq:2')
 })
+
+test('image quota accepts a live getter', () => {
+  const state = {}
+  applyTurnContext(state, { imageQuota: () => 7 })
+  assert.equal(state.imageQuota, 7)
+})

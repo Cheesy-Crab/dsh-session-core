@@ -19,6 +19,7 @@ const normalizeLabel = (label) => String(label ?? '').replace(/[\r\n\t]+/g, ' ')
 export function applyTurnContext(state, {
   level = 'L1',
   accessGrants = [],
+  imageQuota,
   requester,
   principal,
 } = {}) {
@@ -26,6 +27,9 @@ export function applyTurnContext(state, {
   state.accessGrants = accessGrants
   if (requester !== undefined) state.requester = String(requester)
   if (principal !== undefined) state.principal = String(principal)
+  if (imageQuota !== undefined) {
+    state.imageQuota = typeof imageQuota === 'function' ? imageQuota() : imageQuota
+  }
   return state
 }
 
@@ -140,9 +144,9 @@ export class ChatAgentManager {
     })
   }
 
-  setContext(chat, { level = 'L1', accessGrants = [] } = {}) {
+  setContext(chat, { level = 'L1', accessGrants = [], imageQuota } = {}) {
     const state = this.stateFor(chat)
-    applyTurnContext(state, { level, accessGrants })
+    applyTurnContext(state, { level, accessGrants, imageQuota })
     return state
   }
 
@@ -847,7 +851,7 @@ export class ChatAgentManager {
    * chosen by the bridge.
    *
    * @param {{ chat: any, userId?: string, id: string, text: string }} message
-   * @param {{ level?: string, accessGrants?: string[],
+   * @param {{ level?: string, accessGrants?: string[], imageQuota?: number|Function,
    *           requester?: string, principal?: string }} [context]
    */
   async handle(message, context = {}) {
