@@ -11,6 +11,27 @@ const shortId = (id) => {
   return text.length <= 10 ? text : `…${text.slice(-10)}`
 }
 const normalizeLabel = (label) => String(label ?? '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 32)
+
+/**
+ * Apply the bridge → session-core turn context to a chat state.
+ * Kept pure so the adapter contract can be tested without a running agent.
+ */
+export function applyTurnContext(state, {
+  level = 'L1',
+  capabilities = [],
+  imageQuota,
+  requester,
+  principal,
+} = {}) {
+  state.level = level
+  state.capabilities = capabilities
+  state.accessCapabilities = capabilities
+  if (requester !== undefined) state.requester = String(requester)
+  if (principal !== undefined) state.principal = String(principal)
+  if (imageQuota !== undefined) state.imageQuota = imageQuota
+  return state
+}
+
 /**
  * DSH stores workspace paths canonicalized (`fs.realpath`: symlinks and
  * junctions resolved) and only keeps a session in a workspace when
@@ -813,11 +834,26 @@ export class ChatAgentManager {
   /**
    * @param {{ id: string, chat: { type: 'private' | 'group', id: string }, text: string }} message
    */
-  async handle(message, { level = 'L1', capabilities = [], imageQuota } = {}) {
+  /**
+   * Enter a turn from a surface adapter.
+   *
+   * Contract:
+   * - `level` is the access tier (L0-L3), not a profile.
+   * - `capabilities` are access grants (`image`, `read`, `write`, ...), not
+   *   profile capabilities (`image.generate`).
+   * - `requester` is the sender; `principal` owns quota and group permissions.
+   * - `imageQuota` is a billing snapshot, not a tool grant.
+   *
+   * Profile selection happens later, during session creation, and is never
+   * chosen by the bridge.
+   *
+   * @param {{ chat: any, userId?: string, id: string, text: string }} message
+   * @param {{ level?: string, capabilities?: string[], imageQuota?: number,
+   *           requester?: string, principal?: string }} [options]
+   */
+  async handle(message, { level = 'L1', capabilities = [], imageQuota, requester, principal } = {}) {
     const state = this.stateFor(message.chat)
-    state.level = level
-    state.capabilities = capabilities
-    if (imageQuota !== undefined) state.imageQuota = imageQuota
+    applyTurnContext(state, { level, capabilities, imageQuota, requester, principal })
     if (state.pending >= this.config.agent.maxQueue) {
       await this.reply(message.chat, '[qq-bridge] 当前还有消息在处理，请稍后再发。')
       return
@@ -840,6 +876,7 @@ export class ChatAgentManager {
     // A group shares one state, but each turn must reply to its own sender.
     // `state.chat` is otherwise the first chat object that created the state.
     if (message?.chat) state.chat = message.chat
+    if (message?.userId) state.requester = String(message.userId)
     const handle = await this.ensureSession(state)
     const session = handle.agent.session
     await this.applySessionExtensions(handle, state)

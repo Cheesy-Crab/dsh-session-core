@@ -3,7 +3,7 @@ import { AccessService } from './access/service.js'
 
 export { SessionService } from './service.js'
 export { AccessService } from './access/service.js'
-export { ChatAgentManager } from './manager.js'
+export { applyTurnContext, ChatAgentManager } from './manager.js'
 export * from './paths.js'
 export * from './reply.js'
 export * from './titles.js'
