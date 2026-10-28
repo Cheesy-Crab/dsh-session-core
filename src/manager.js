@@ -18,15 +18,13 @@ const normalizeLabel = (label) => String(label ?? '').replace(/[\r\n\t]+/g, ' ')
  */
 export function applyTurnContext(state, {
   level = 'L1',
-  accessGrants,
-  capabilities,
+  accessGrants = [],
   imageQuota,
   requester,
   principal,
 } = {}) {
-  const grants = accessGrants ?? capabilities ?? []
   state.level = level
-  state.accessGrants = grants
+  state.accessGrants = accessGrants
   if (requester !== undefined) state.requester = String(requester)
   if (principal !== undefined) state.principal = String(principal)
   if (imageQuota !== undefined) state.imageQuota = imageQuota
@@ -146,9 +144,9 @@ export class ChatAgentManager {
     })
   }
 
-  setContext(chat, { level = 'L1', accessGrants, capabilities, imageQuota } = {}) {
+  setContext(chat, { level = 'L1', accessGrants = [], imageQuota } = {}) {
     const state = this.stateFor(chat)
-    applyTurnContext(state, { level, accessGrants, capabilities, imageQuota })
+    applyTurnContext(state, { level, accessGrants, imageQuota })
     return state
   }
 
@@ -463,12 +461,12 @@ export class ChatAgentManager {
    * @param {string} level
    * @param {any} state
    */
-  applySandboxMode(session, level, capabilities, state) {
+  applySandboxMode(session, level, accessGrants, state) {
     const configured = this.config.sandbox?.modeByLevel ?? {}
     let mode = configured[level] ?? 'read-only'
     if (level === 'L3') {
       mode = configured.L3 ?? 'danger-full-access'
-    } else if (level !== 'L0' && (capabilities.includes('write') || capabilities.includes('exec'))) {
+    } else if (level !== 'L0' && (accessGrants.includes('write') || accessGrants.includes('exec'))) {
       mode = 'workspace-write'
     }
     if (state.sandboxMode === mode) return mode
@@ -838,7 +836,7 @@ export class ChatAgentManager {
    *
    * Contract:
    * - `level` is the access tier (L0-L3), not a profile.
-   * - `capabilities` are access grants (`image`, `read`, `write`, ...), not
+   * - `accessGrants` are access grants (`image`, `read`, `write`, ...), not
    *   profile capabilities (`image.generate`).
    * - `requester` is the sender; `principal` owns quota and group permissions.
    * - `imageQuota` is a billing snapshot, not a tool grant.
@@ -847,12 +845,11 @@ export class ChatAgentManager {
    * chosen by the bridge.
    *
    * @param {{ chat: any, userId?: string, id: string, text: string }} message
-   * @param {{ level?: string, capabilities?: string[], imageQuota?: number,
-   *           requester?: string, principal?: string }} [options]
+   * @param {{ level?: string, accessGrants?: string[], imageQuota?: number,
+   *           requester?: string, principal?: string }} [context]
    */
-  async handle(message, { level = 'L1', accessGrants, capabilities, imageQuota, requester, principal } = {}) {
+  async handle(message, context = {}) {
     const state = this.stateFor(message.chat)
-    applyTurnContext(state, { level, accessGrants, capabilities, imageQuota, requester, principal })
     if (state.pending >= this.config.agent.maxQueue) {
       await this.reply(message.chat, '[qq-bridge] 当前还有消息在处理，请稍后再发。')
       return
@@ -860,7 +857,7 @@ export class ChatAgentManager {
 
     state.pending += 1
     state.chain = state.chain
-      .then(() => this.run(state, message))
+      .then(() => this.run(state, message, context))
       .catch((error) => {
         this.log('error', `turn failed for ${state.key}: ${error?.stack ?? error}`)
         return this.reply(message.chat, `[qq-bridge] 处理失败：${clip(error?.message ?? error)}`)
@@ -871,11 +868,16 @@ export class ChatAgentManager {
     return state.chain
   }
 
-  async run(state, message) {
+  async run(state, message, context = {}) {
     // A group shares one state, but each turn must reply to its own sender.
     // `state.chat` is otherwise the first chat object that created the state.
     if (message?.chat) state.chat = message.chat
-    if (message?.userId) state.requester = String(message.userId)
+    applyTurnContext(state, {
+      ...context,
+      ...(context.requester === undefined && message?.userId
+        ? { requester: message.userId }
+        : {}),
+    })
     const handle = await this.ensureSession(state)
     const session = handle.agent.session
     await this.applySessionExtensions(handle, state)
@@ -1063,4 +1065,5 @@ function resolveByIndexOrName(workspaces, token) {
   return workspaces.find((workspace) => workspace.title === token)
     ?? workspaces.find((workspace) => workspace.id.startsWith(String(token)))
 }
+
 
