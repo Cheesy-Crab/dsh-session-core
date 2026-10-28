@@ -210,12 +210,15 @@ export class ChatAgentManager {
    * Without this, models often write a file path in prose and believe it was sent.
    */
   applySessionExtensions(handle, state, profile = {}) {
+    // Platform predicts the effective profile at agent/created. Pass the same
+    // object to every extension so prompt/policy/tool exposure cannot diverge.
+    const effective = profile?.id ? profile : (handle?.agent?.__platformProfile ?? profile)
     return this.behavior.sessionReady?.({
       agent: handle.agent,
       session: handle.agent.session,
       chat: state.chat,
       state,
-      profile,
+      profile: effective,
       level: state.level ?? 'L1',
       sendText: this.send,
       sendImage: this.sendImage,
