@@ -1,4 +1,4 @@
-import fs from 'node:fs'
+﻿import fs from 'node:fs'
 import path from 'node:path'
 
 import { groupDir, ownsDir, uniquenessKey, userDir, validateName, workspacePath } from './paths.js'
@@ -18,14 +18,15 @@ const normalizeLabel = (label) => String(label ?? '').replace(/[\r\n\t]+/g, ' ')
  */
 export function applyTurnContext(state, {
   level = 'L1',
-  capabilities = [],
+  accessGrants,
+  capabilities,
   imageQuota,
   requester,
   principal,
 } = {}) {
+  const grants = accessGrants ?? capabilities ?? []
   state.level = level
-  state.capabilities = capabilities
-  state.accessCapabilities = capabilities
+  state.accessGrants = grants
   if (requester !== undefined) state.requester = String(requester)
   if (principal !== undefined) state.principal = String(principal)
   if (imageQuota !== undefined) state.imageQuota = imageQuota
@@ -120,7 +121,7 @@ export class ChatAgentManager {
         profileOverride: saved?.profile,
         guest: false,
         level: 'L1',
-        capabilities: [],
+        accessGrants: [],
         handle: undefined,
       }
       this.chats.set(key, state)
@@ -145,11 +146,9 @@ export class ChatAgentManager {
     })
   }
 
-  setContext(chat, { level = 'L1', capabilities = [], imageQuota } = {}) {
+  setContext(chat, { level = 'L1', accessGrants, capabilities, imageQuota } = {}) {
     const state = this.stateFor(chat)
-    state.level = level
-    state.capabilities = capabilities
-    if (imageQuota !== undefined) state.imageQuota = imageQuota
+    applyTurnContext(state, { level, accessGrants, capabilities, imageQuota })
     return state
   }
 
@@ -399,7 +398,7 @@ export class ChatAgentManager {
         await this.ensurePreset(handle.agent, preset)
         await this.applySessionExtensions(handle, state, profile)
         this.track(state, state.sessionId)
-        this.applySandboxMode(handle.agent.session, state.level ?? 'L1', state.capabilities ?? [], state)
+        this.applySandboxMode(handle.agent.session, state.level ?? 'L1', state.accessGrants ?? [], state)
         state.handle = handle
         this.log('info', `session resumed ${state.key} ${state.sessionId}`)
         return handle
@@ -429,7 +428,7 @@ export class ChatAgentManager {
     await this.ensurePreset(handle.agent, preset)
     await this.applySessionExtensions(handle, state, profile)
     this.track(state, sessionId)
-    this.applySandboxMode(handle.agent.session, state.level ?? 'L1', state.capabilities ?? [], state)
+    this.applySandboxMode(handle.agent.session, state.level ?? 'L1', state.accessGrants ?? [], state)
 
     state.sessionId = sessionId
     state.sessions[workspace.id] = sessionId
@@ -851,9 +850,9 @@ export class ChatAgentManager {
    * @param {{ level?: string, capabilities?: string[], imageQuota?: number,
    *           requester?: string, principal?: string }} [options]
    */
-  async handle(message, { level = 'L1', capabilities = [], imageQuota, requester, principal } = {}) {
+  async handle(message, { level = 'L1', accessGrants, capabilities, imageQuota, requester, principal } = {}) {
     const state = this.stateFor(message.chat)
-    applyTurnContext(state, { level, capabilities, imageQuota, requester, principal })
+    applyTurnContext(state, { level, accessGrants, capabilities, imageQuota, requester, principal })
     if (state.pending >= this.config.agent.maxQueue) {
       await this.reply(message.chat, '[qq-bridge] 当前还有消息在处理，请稍后再发。')
       return
@@ -881,7 +880,7 @@ export class ChatAgentManager {
     const session = handle.agent.session
     await this.applySessionExtensions(handle, state)
     this.track(state, session?.header?.id, message.userId)
-    this.applySandboxMode(session, state.level ?? 'L1', state.capabilities ?? [], state)
+    this.applySandboxMode(session, state.level ?? 'L1', state.accessGrants ?? [], state)
     await this.flushFollowUps(state, session)
 
     this.delivered.set(session, session.seq)
@@ -1064,3 +1063,4 @@ function resolveByIndexOrName(workspaces, token) {
   return workspaces.find((workspace) => workspace.title === token)
     ?? workspaces.find((workspace) => workspace.id.startsWith(String(token)))
 }
+

@@ -1,6 +1,6 @@
 {
   "name": "@dsh/session-core",
-  "version": "0.52.0",
+  "version": "0.52.1",
   "description": "Surface-neutral DSH session service: workspace, session lifecycle, queue and reply handling.",
   "type": "module",
   "main": "./src/index.js",
